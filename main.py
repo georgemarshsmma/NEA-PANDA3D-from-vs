@@ -1,5 +1,6 @@
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import WindowProperties
+from panda3d.core import GraphicsWindow
 
 class WashingtonBullets(ShowBase):
     def __init__(self):
@@ -31,12 +32,14 @@ class WashingtonBullets(ShowBase):
         self.accept('escape', self.mouseRelease)
     
     def mouseInGame(self): #takes mouse input in game
+        props = base.win.getProperties()
         md = self.win.getPointer(0)
         self.prevMouseX = md.getX()
         self.prevMouseY = md.getY()
         props = WindowProperties()
         props.setCursorHidden(True) #hides cursor
-        props.setMouseMode(WindowProperties.M_confined) #holds mouse in place in game
+
+        props.setMouseMode(WindowProperties.M_relative) #holds mouse in place in game, ONLY WORKS ON MAC FOR SOME REASON????
         self.win.requestProperties(props)
     
     def mouseRelease(self):
@@ -60,12 +63,10 @@ class WashingtonBullets(ShowBase):
         currentH = self.camera.getH()
         currentP = self.camera.getP()
 
-
         self.camera.setHpr(
             currentH - mouseChangeX * dt * self.cameraSwingFactor,
             min(90, max(-90, currentP - mouseChangeY * dt * self.cameraSwingFactor)),
-            0
-        )
+            0)
 
         self.prevMouseX = mouseX
         self.prevMouseY = mouseY
