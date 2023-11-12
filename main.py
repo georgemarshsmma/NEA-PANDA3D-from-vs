@@ -31,9 +31,12 @@ class WashingtonBullets(ShowBase):
         self.accept('escape', self.mouseRelease)
     
     def mouseInGame(self): #takes mouse input in game
+        md = self.win.getPointer(0)
+        self.prevMouseX = md.getX()
+        self.prevMouseY = md.getY()
         props = WindowProperties()
         props.setCursorHidden(True) #hides cursor
-        props.setMouseMode(WindowProperties.M_relative) #holds mouse in place in game
+        props.setMouseMode(WindowProperties.M_confined) #holds mouse in place in game
         self.win.requestProperties(props)
     
     def mouseRelease(self):
@@ -42,8 +45,31 @@ class WashingtonBullets(ShowBase):
         props.setMouseMode(WindowProperties.M_absolute) #holds mouse can go outside window
         self.win.requestProperties(props)
 
-    def update(self, logic)
-        
+    def update(self, logic):
+        dt = globalClock.getDt()
+
+        md = self.win.getPointer(0)
+        mouseX = md.getX()
+        mouseY = md.getY()
+
+        mouseChangeX = mouseX - self.prevMouseX
+        mouseChangeY = mouseY - self.prevMouseY
+
+        self.cameraSwingFactor = 20
+
+        currentH = self.camera.getH()
+        currentP = self.camera.getP()
+
+
+        self.camera.setHpr(
+            currentH - mouseChangeX * dt * self.cameraSwingFactor,
+            min(90, max(-90, currentP - mouseChangeY * dt * self.cameraSwingFactor)),
+            0
+        )
+
+        self.prevMouseX = mouseX
+        self.prevMouseY = mouseY
+
         return logic.cont
     
 
