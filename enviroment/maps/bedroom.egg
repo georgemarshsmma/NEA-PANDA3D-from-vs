@@ -22,6 +22,7 @@
 }
 
 <Group> bedroom {
+	<Collide> { Polyset keep descend }
 	<Transform> {
 		<Matrix4> { 
 			3.2808398950131235 0.0 0.0 0.0 
