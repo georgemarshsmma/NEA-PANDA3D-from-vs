@@ -1,6 +1,6 @@
 from math import pi, sin, cos
-from direct.showbase.ShowBase import ShowBase
-from panda3d.core import WindowProperties
+from direct.showbase.ShowBase import ShowBase 
+from panda3d.core import WindowProperties 
 from panda3d.core import CollisionTraverser, CollisionSphere, CollisionNode, CollisionBox, CollisionHandlerQueue, CollisionHandlerPusher, CollisionRay
 from panda3d.core import GraphicsWindow
 from panda3d.core import NodePath
@@ -10,24 +10,20 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenImage import OnscreenImage
 import sys
 from direct.actor.Actor import Actor
+from panda3d.core import NodePath
 #from actors import character1
 
-#loadPrcFile('config.prc')
+loadPrcFile('config.prc')
 
-def degToRad(degrees):
-    return degrees * (pi / 180.0)
-
-class WashingtonBullets(ShowBase):
+class game(ShowBase):
 
     def __init__(self):
         ShowBase.__init__(self)
-
         self.properties()
         self.collision()
         self.enviroment1()
         self.initPlayer()
     
-    '''HERE LIES DEY BASIC INIT CODE FOR DEM MAN BHAD GAME! SKELETON TING!'''
 
     def properties(self): #sets up game properties
         props = WindowProperties() #creates window properties
@@ -45,28 +41,32 @@ class WashingtonBullets(ShowBase):
     def enviroment1(self):
         self.scene = self.loader.loadModel('enviroment/maps/bedroom.egg')
         #self.scene.setScale(1, 1, 1)
-        self.scene.reparentTo(self.render)
+        self.scene.reparentTo(self.render)  
         self.scene.setTwoSided(True)
     
     def initPlayer(self):
         self.node = Player()
 
 
-class Player(object):
+class Player(Actor):
 
-    speed = 20
-    FORWARD = Vec3(0,2,0)
+    speed = 50
+    FORWARD = Vec3(0,1,0)
     BACK = Vec3(0,-1,0)
     LEFT = Vec3(-1,0,0)
     RIGHT = Vec3(1,0,0)
     STOP = Vec3(0)
     walk = STOP
+    strafe = STOP
 
+    
     def __init__(self):
         self.loadModel()
         self.setupCamera()
         self.createCollisions()
         self.controls()
+        #health - initial health, items in game that increase health,
+        #weapon = Weapon(), argument dictates how strong the weapon is,
 
         taskMgr.add(self.mouseTask, 'mouse-update')
         taskMgr.add(self.moveTask, 'move-update')
@@ -94,24 +94,33 @@ class Player(object):
         ray.setDirection(0,0,-1)
         cn = CollisionNode('player')
         cn.addSolid(ray)
-        cn.setFromCollideMask(BitMask32.bit(0))
-        cn.setIntoCollideMask(BitMask32.allOff())
+        cn.setFromCollideMask(BitMask32.bit(0)) 
+        cn.setIntoCollideMask(BitMask32.allOff()) 
         solid = self.node.attachNewNode(cn)
         self.nodeGroundHandler = CollisionHandlerQueue()
         base.cTrav.addCollider(solid, self.nodeGroundHandler)
+
+
+    #def updateKeyMap(self, key, value):
+        #self.keyMap[key] = value
+        #print(key, 'set to', value)
+
     
     def controls(self):
-        base.accept('escape', self.mouseRelease)
-        base.accept('mouse1', self.mouseInGame)
+        #base.accept('escape', self.mouseRelease)
+        #base.accept('mouse1', self.mouseInGame)
 
-        base.accept('w', self.__setattr__, ['walk', self.FORWARD])
-        base.accept('w-up', self.__setattr__, ['walk', self.STOP])
-        base.accept('a', self.__setattr__, ['walk', self.LEFT])
-        base.accept('a-up', self.__setattr__, ['walk', self.STOP])
-        base.accept('s', self.__setattr__, ['walk', self.BACK])
-        base.accept('s-up', self.__setattr__, ['walk', self.STOP])
-        base.accept('d', self.__setattr__, ['walk', self.RIGHT])
-        base.accept('d-up', self.__setattr__, ['walk', self.STOP])
+        base.accept( "w" , self.__setattr__,["walk",self.FORWARD])
+        base.accept( "s" , self.__setattr__,["walk",self.BACK] )
+        base.accept( "s-up" , self.__setattr__,["walk",self.STOP] )
+        base.accept( "w-up" , self.__setattr__,["walk",self.STOP] )
+        base.accept( "a" , self.__setattr__,["strafe",self.LEFT])
+        base.accept( "d" , self.__setattr__,["strafe",self.RIGHT] )
+        base.accept( "a-up" , self.__setattr__,["strafe",self.STOP] )
+        base.accept( "d-up" , self.__setattr__,["strafe",self.STOP] )
+        #sprint
+        #base.accept("mouse1", self.__setattr__, ["shoot", True])
+        #base.accept("mouse1-up", self.__setattr__, ["shoot", False])
     
     def mouseTask(self, task):
         md = base.win.getPointer(0)
@@ -124,6 +133,7 @@ class Player(object):
     
     def moveTask(self,task):
         self.node.setPos(self.node,self.walk*globalClock.getDt()*self.speed)
+        self.node.setPos(self.node,self.strafe*globalClock.getDt()*self.speed)
         return task.cont
         
     #def updateKeyMap(self, key, value):
@@ -131,15 +141,21 @@ class Player(object):
 
     def mouseInGame(self): #takes mouse input in game
         self.cameraSwingActivated = True
+
         props = WindowProperties()
         props.setCursorHidden(True) #hides cursor
         self.win.requestProperties(props)
 
     def mouseRelease(self):
+        self.cameraSwingActivated = False
+
         props = WindowProperties()
         props.setCursorHidden(False) #shows cursor
         self.win.requestProperties(props)
 
+class Enemy(object):
+    
 
-app = WashingtonBullets()
+
+app = game()
 app.run()
