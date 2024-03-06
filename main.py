@@ -12,7 +12,7 @@ import sys
 from direct.actor.Actor import Actor
 #from actors import character1
 
-#loadPrcFile('config.prc')
+loadPrcFile('config.prc')
 
 def degToRad(degrees):
     return degrees * (pi / 180.0)
@@ -55,7 +55,7 @@ class WashingtonBullets(ShowBase):
 class Player(object):
 
     speed = 20
-    FORWARD = Vec3(0,2,0)
+    FORWARD = Vec3(0,1,0)
     BACK = Vec3(0,-1,0)
     LEFT = Vec3(-1,0,0)
     RIGHT = Vec3(1,0,0)

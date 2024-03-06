@@ -1,5 +1,5 @@
 class GameObject():
-    pass
+    
 
 class Player(GameObject):
     pass
