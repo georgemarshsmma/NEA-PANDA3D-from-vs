@@ -9,11 +9,8 @@ from panda3d.core import loadPrcFile
 from direct.gui.OnscreenImage import OnscreenImage
 import sys
 from direct.actor.Actor import Actor
-from gameobject import *
-from panda3d.core import AmbientLight, DirectionalLight
 from direct.gui.DirectGui import *
-
-loadPrcFile('NEA-PANDA3D-from-vs/Config.prc')
+import random
 
 class game(ShowBase):
 
@@ -43,13 +40,7 @@ class game(ShowBase):
         self.destroyMenu()
         self.initEnvironment()
         self.initActor()
-        self.Enemy = WalkingEnemy(Vec3(5,0,0)) # spawns an enemy at thre coords 5,0,0
-        print(12)
-
-    def update(self, task):
-        dt = globalClock.getDt()
-        self.Enemy.update(self.player, dt)
-        return task.cont
+        self.initEnemy()
     
     def exitGame(self):
         print('exiting game')
@@ -83,6 +74,9 @@ class game(ShowBase):
         self.actor = Player()
     
 
+    def initEnemy(self):
+        self.enemy = Enemy()
+
 class Player(Actor):
 
     speed = 20
@@ -112,7 +106,7 @@ class Player(Actor):
     def loadModel(self):
         self.player = NodePath('player')
         self.player.reparentTo(render)
-        self.player.setPos(0, 10, 1)
+        self.player.setPos(0, 10, 2)
 
     def setupCamera(self):
         pl = base.cam.node().getLens()
@@ -122,7 +116,7 @@ class Player(Actor):
     
     def collision(self):
         colliderNode = CollisionNode('player')
-        colliderNode.addSolid(CollisionSphere(0,0,0,3))
+        colliderNode.addSolid(CollisionSphere(0,0,0,4))
         solid = self.player.attachNewNode(colliderNode)
         base.cTrav.addCollider(solid, base.pusher)
         base.pusher.addCollider(solid, self.player, base.drive.node())
@@ -179,11 +173,73 @@ class Player(Actor):
         # gravity effects and jumps
         self.player.setZ(self.player.getZ()+self.jump*globalClock.getDt())
         self.jump -= 6*globalClock.getDt()
-        if highestZ > self.player.getZ()-4:
+        if highestZ > self.player.getZ()-10:
             self.jump = 0
             self.player.setZ(highestZ+.3)
             if self.readyToJump:
                 self.jump = 1
+        return task.cont
+
+class Enemy(Actor):
+    
+    def __init__(self):
+        self.enemy = Actor('models/panda-model.egg',
+                           {'walk': 'models/panda-walk4'})
+        self.enemy.setScale(0.009, 0.009, 0.009)
+        pos = random.randint(-100,100)
+        self.enemy.setPos(pos, pos, 0)
+        self.enemy.reparentTo(render)
+        self.enemy.loop('walk')
+    
+
+
+class Weapon:
+        
+    def __init__(self):
+        self.ammo = 10
+        self.maxAmmo = 20
+        self._reloadTime = 2
+        self.reloading = False
+
+    def shoot(self, player_pos, enemy_list):
+        if self.ammo > 0 and not self.reloading:
+            bullet = Bullet(player_pos, enemy_list)
+            bullet.shoot
+            self.ammo =- 1
+            print('shooting')
+        
+    def reload(self):
+        if self.ammo < self.maxAmmo and not self.reloading:
+            self.reloading = True
+        
+    def finishReload(self, task):
+        self.ammo = self.maxAmmo
+        self.reloading = False
+        print('reloading. current ammo', self.ammo)
+
+
+class Bullet:
+    speed = 100
+
+    def __init__(self, player_pos, enemy_list):
+        self.bullet = loader.loadModel('environment/bullet.egg')
+        self.bullet.reparentTo(render)
+        self.bullet.setScale(0.1)
+        self.bullet.setPos(player_pos)
+
+        self.enemy_list = enemy_list
+
+    def shoot(self):
+        taskMgr.add(self.moveBullet, 'move-bullet')
+    
+    def moveBullet(self, task):
+        self.bullet.setPos(self.bullet, 0, self.speed * globalClock.getDt(), 0)
+
+        for enemy in self.enemy_list:
+            if self.bullet.getPos(render).distance(enemy.enemy.getPos(render)) < 2:
+                self.bullet.removeNode()
+                enemy.enemy.removeNode()
+                return task.done
         return task.cont
 
 app = game()
