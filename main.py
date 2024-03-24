@@ -4,16 +4,17 @@ from panda3d.core import CollisionTraverser, CollisionSphere, CollisionNode, Col
 from panda3d.core import GraphicsWindow
 from panda3d.core import NodePath
 from panda3d.core import BitMask32
-from panda3d.core import Vec3, Vec4
+from panda3d.core import Vec3, Vec2
 from panda3d.core import loadPrcFile
 from direct.gui.OnscreenImage import OnscreenImage
 import sys
 from direct.actor.Actor import Actor
-from gameobject import *
-from panda3d.core import AmbientLight, DirectionalLight
 from direct.gui.DirectGui import *
-
-loadPrcFile('NEA-PANDA3D-from-vs/Config.prc')
+from direct.showbase.DirectObject import DirectObject
+from direct.interval.IntervalGlobal import Sequence
+from direct.interval.FunctionInterval import Func
+from panda3d.bullet import BulletWorld, BulletSphereShape, BulletRigidBodyNode, BulletDebugNode
+import random
 
 class game(ShowBase):
 
@@ -43,13 +44,7 @@ class game(ShowBase):
         self.destroyMenu()
         self.initEnvironment()
         self.initActor()
-        self.Enemy = WalkingEnemy(Vec3(5,0,0)) # spawns an enemy at thre coords 5,0,0
-        print(12)
-
-    def update(self, task):
-        dt = globalClock.getDt()
-        self.Enemy.update(self.player, dt)
-        return task.cont
+        self.initEnemy()
     
     def exitGame(self):
         print('exiting game')
@@ -78,14 +73,17 @@ class game(ShowBase):
         #self.scene.setScale(1, 1, 1)
         self.scene.reparentTo(self.render)
         self.scene.setTwoSided(True)
-        
+
     def initActor(self):
         self.actor = Player()
     
+    def initEnemy(self):
+        self.enemy = Enemy(self.actor)
 
+    
 class Player(Actor):
 
-    speed = 20
+    speed = 50
     FORWARD = Vec3(0,2,0)
     BACK = Vec3(0,-1,0)
     LEFT = Vec3(-1,0,0)
@@ -112,7 +110,7 @@ class Player(Actor):
     def loadModel(self):
         self.player = NodePath('player')
         self.player.reparentTo(render)
-        self.player.setPos(0, 10, 1)
+        self.player.setPos(0, 10, 2)
 
     def setupCamera(self):
         pl = base.cam.node().getLens()
@@ -122,7 +120,7 @@ class Player(Actor):
     
     def collision(self):
         colliderNode = CollisionNode('player')
-        colliderNode.addSolid(CollisionSphere(0,0,0,3))
+        colliderNode.addSolid(CollisionSphere(0,0,0,4))
         solid = self.player.attachNewNode(colliderNode)
         base.cTrav.addCollider(solid, base.pusher)
         base.pusher.addCollider(solid, self.player, base.drive.node())
@@ -132,8 +130,8 @@ class Player(Actor):
         ray.setDirection(0,0,-1)
         colliderNode = CollisionNode('playerRay')
         colliderNode.addSolid(ray)
-        colliderNode.setFromCollideMask(BitMask32.bit(1))   # Set from collide mask
-        colliderNode.setIntoCollideMask(BitMask32.allOff())  # Set into collide mask
+        colliderNode.setFromCollideMask(BitMask32.bit(1)) 
+        colliderNode.setIntoCollideMask(BitMask32.allOff())
         solid = self.player.attachNewNode(colliderNode)
         self.nodeGroundHandler = CollisionHandlerQueue()
         base.cTrav.addCollider(solid, self.nodeGroundHandler)
@@ -151,8 +149,8 @@ class Player(Actor):
         self.accept( "d" , self.__setattr__,["strafe",self.RIGHT] )
         self.accept( "a-up" , self.__setattr__,["strafe",self.STOP] )
         self.accept( "d-up" , self.__setattr__,["strafe",self.STOP] )
-        #base.accept("mouse1", self.__setattr__, ["shoot", True])
-        #base.accept("mouse1-up", self.__setattr__, ["shoot", False])
+        #self.accept("mouse1", lambda: self.weapon.fire, self.enemyList)
+        #self.accept("r", self.weapon.reload, ["shoot", False])
             
     def mouseTask(self, task):
         md = base.win.getPointer(0)
@@ -179,12 +177,71 @@ class Player(Actor):
         # gravity effects and jumps
         self.player.setZ(self.player.getZ()+self.jump*globalClock.getDt())
         self.jump -= 6*globalClock.getDt()
-        if highestZ > self.player.getZ()-4:
+        if highestZ > self.player.getZ()-10:
             self.jump = 0
             self.player.setZ(highestZ+.3)
             if self.readyToJump:
                 self.jump = 1
         return task.cont
+
+
+class Enemy(Actor):
+    
+    def __init__(self, player):
+        self.player = player
+        self.enemy = Actor('models/panda-model.egg',
+                           {'walk': 'models/panda-walk4'})
+        self.enemy.setScale(0.009)
+        pos = random.randint(-100,100)
+        self.enemy.setPos(pos, pos, 1)
+        self.enemy.reparentTo(render)
+        self.enemy.loop('walk')
+        self.followPlayer()
+    
+    def followPlayer(self):
+        taskMgr.add(self.updateFollow, 'update follow', extraArgs=[self.player], appendTask=True)
+
+
+    def updateFollow(self, player, task):
+        directionToPlayer = player.player.getPos() - self.enemy.getPos()
+        directionToPlayer.setZ(0)
+        directionToPlayer.normalize()
+        self.enemy.setPos(self.enemy.getPos() + directionToPlayer * 0.4)
+        self.enemy.lookAt(player.player)
+        return task.cont
+
+
+class Weapon(DirectObject):
+
+    def __init__(self, render, player, enemyList):
+        self.render = render
+        self.player = player
+        self.enemyList = enemyList
+
+        self.accept('mouse1', self.fire)
+    
+    def fire(self):
+        bullet = Bullet(self.render, self.player.getPos(), 'models/bullet.glb')
+        bullet.move()
+        bullet.detectCollision(self.enemyList)
+
+class Bullet():
+    def __init__(self, render, startPos, modelPath):
+        self.render = render
+        self.bullet = loader.loadModel(modelPath)
+        self.bullet.setPos(startPos)
+        self.bullet.reparentTo(self.render)
+    
+    def move(self):
+        bullet_interval = self.bullet.posInterval(1, Vec3(10, 0, 0), startPos=self.bullet.getPos())
+        bullet_sequence = Sequence(bullet_interval, Func(self.bullet.removeNode))
+        bullet_sequence.start()
+
+    def detectCollision(self, enemyList):
+        for enemy in enemyList:
+            if self.bullet.getPos(render).getX() == enemy.getPos(render).getX() and self.bullet.getPos(render).getY == enemy.getPos(render).getY():
+                enemy.removeNode()
+
 
 app = game()
 app.run()
