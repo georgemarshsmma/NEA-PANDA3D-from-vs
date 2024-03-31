@@ -37,7 +37,7 @@ class game(ShowBase):
 
     def exitGame(self):
         print('exiting game')
-        self.destroy()
+        sys.exit()
 
     def startMenu(self):
         self.startFrame = DirectFrame(frameSize=(-1, 1, -1, 1), frameColor=(0, 0, 0, 0.5))
