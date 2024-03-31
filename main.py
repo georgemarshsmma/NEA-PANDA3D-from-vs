@@ -13,7 +13,6 @@ from direct.gui.DirectGui import *
 from direct.showbase.DirectObject import DirectObject
 from direct.interval.IntervalGlobal import Sequence
 from direct.interval.FunctionInterval import Func
-from panda3d.bullet import BulletWorld, BulletSphereShape, BulletRigidBodyNode, BulletDebugNode
 import random
 
 class game(ShowBase):
@@ -80,7 +79,7 @@ class game(ShowBase):
     def initEnemy(self):
         self.enemy = Enemy(self.actor)
 
-    
+   
 class Player(Actor):
 
     speed = 50
@@ -206,40 +205,40 @@ class Enemy(Actor):
         directionToPlayer = player.player.getPos() - self.enemy.getPos()
         directionToPlayer.setZ(0)
         directionToPlayer.normalize()
-        self.enemy.setPos(self.enemy.getPos() + directionToPlayer * 0.4)
+        self.enemy.setPos(self.enemy.getPos() + directionToPlayer * 0.2)
         self.enemy.lookAt(player.player)
         return task.cont
 
 
 class Weapon(DirectObject):
-
-    def __init__(self, render, player, enemyList):
+    def __init__(self, render, player, enemy_list):
         self.render = render
         self.player = player
-        self.enemyList = enemyList
+        self.enemy_list = enemy_list
+        self.accept("mouse1", self.fire, print('shoot'))
+        
 
-        self.accept('mouse1', self.fire)
-    
     def fire(self):
-        bullet = Bullet(self.render, self.player.getPos(), 'models/bullet.glb')
+        bullet = Bullet(self.render, self.player.getPos(), "sprite.egg")
         bullet.move()
-        bullet.detectCollision(self.enemyList)
+        bullet.detectCollision(self.enemy_list)
 
-class Bullet():
-    def __init__(self, render, startPos, modelPath):
+
+class Bullet:
+    def __init__(self, render, start_pos, model_path):
         self.render = render
-        self.bullet = loader.loadModel(modelPath)
-        self.bullet.setPos(startPos)
+        self.bullet = loader.loadModel(model_path)  
+        self.bullet.setPos(start_pos)
         self.bullet.reparentTo(self.render)
-    
+
     def move(self):
         bullet_interval = self.bullet.posInterval(1, Vec3(10, 0, 0), startPos=self.bullet.getPos())
         bullet_sequence = Sequence(bullet_interval, Func(self.bullet.removeNode))
         bullet_sequence.start()
 
-    def detectCollision(self, enemyList):
-        for enemy in enemyList:
-            if self.bullet.getPos(render).getX() == enemy.getPos(render).getX() and self.bullet.getPos(render).getY == enemy.getPos(render).getY():
+    def detectCollision(self, enemy_list):
+        for enemy in enemy_list:
+            if self.bullet.getPos(render).getX() == enemy.getPos(render).getX() and self.bullet.getPos(render).getY() == enemy.getPos(render).getY():
                 enemy.removeNode()
 
 
